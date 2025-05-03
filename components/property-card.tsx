@@ -1,10 +1,8 @@
 "use client"
 
-import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Badge } from "@/components/ui/badge"
-import { Heart } from "lucide-react"
 import { useLanguage } from "@/components/language-switcher"
 
 interface PropertyCardProps {
@@ -13,12 +11,12 @@ interface PropertyCardProps {
 }
 
 export function PropertyCard({ property, featured = false }: PropertyCardProps) {
-  const [isSaved, setIsSaved] = useState(false)
+
   const { translate } = useLanguage()
 
   // Use the first image from the images array
   const imageUrl = property.images?.[0] || "/placeholder.svg"
-  
+
   // Format price with thousand separator
   const formatPrice = (price: string, currency: string) => {
     const numericPrice = parseInt(price)
@@ -29,7 +27,7 @@ export function PropertyCard({ property, featured = false }: PropertyCardProps) 
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow will-change-transform">
       <div className="relative">
         <div className="relative w-full h-48">
           <Image
@@ -38,6 +36,10 @@ export function PropertyCard({ property, featured = false }: PropertyCardProps) 
             fill
             className="object-cover"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            loading="lazy"
+            quality={75}
+            placeholder="blur"
+            blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABQODxIPDRQSEBIXFRQdHx0fHRsdHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR3/2wBDAR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR3/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
           />
         </div>
         {property.isPremium && (
@@ -50,13 +52,7 @@ export function PropertyCard({ property, featured = false }: PropertyCardProps) 
             {property.propertyType}
           </Badge>
         )}
-        <button
-          onClick={() => setIsSaved(!isSaved)}
-          className="absolute top-2 left-2 bg-white p-1.5 rounded-full shadow-md"
-          aria-label={isSaved ? translate("saved") : translate("save_property")}
-        >
-          <Heart className={`h-5 w-5 ${isSaved ? "fill-rose-500 text-rose-500" : ""}`} />
-        </button>
+
       </div>
       <div className="p-4">
         <Link href={`/properties/${property.id}`} className="hover:underline">
@@ -65,7 +61,11 @@ export function PropertyCard({ property, featured = false }: PropertyCardProps) 
         <p className="text-sm text-neutral-500 mt-1">{property.location}</p>
         <div className="flex items-center gap-2 mt-2 text-sm">
           <span>
-            {property.bedrooms} {parseInt(property.bedrooms) === 1 ? translate("bed") : translate("beds")}
+            {property.bedrooms} {translate("bedroom")}{parseInt(property.bedrooms) !== 1 && 's'}
+          </span>
+          <span>•</span>
+          <span>
+            {property.bathrooms} {translate("bathroom")}{parseFloat(property.bathrooms) !== 1 && 's'}
           </span>
           {property.floor && (
             <>
@@ -80,6 +80,13 @@ export function PropertyCard({ property, featured = false }: PropertyCardProps) 
             </>
           )}
         </div>
+        {/* Description Summary */}
+        {property.descriptionSummary && (
+          <p className="mt-2 text-sm text-neutral-600 line-clamp-2">
+            {property.descriptionSummary}
+          </p>
+        )}
+
         <div className="mt-3">
           <span className="font-semibold">{formatPrice(property.price, property.currency || 'USD')}</span>
           {property.paymentTerms && (

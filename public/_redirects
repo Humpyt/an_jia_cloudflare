@@ -1,0 +1,6 @@
+# Redirect API requests to WordPress backend
+/api/wordpress/* https://yourdomain.com/wp-json/:splat 200
+/wp-json/* https://yourdomain.com/wp-json/:splat 200
+
+# Handle SPA routing
+/* /index.html 200

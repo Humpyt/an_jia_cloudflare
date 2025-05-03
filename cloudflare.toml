@@ -1,0 +1,24 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[site]
+  bucket = ".next"
+  entry-point = "."
+
+[[redirects]]
+  from = "/api/wordpress/*"
+  to = "https://your-wordpress-domain.com/wp-json/:splat"
+  status = 200
+  force = true
+  headers = {Access-Control-Allow-Origin = "*"}
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

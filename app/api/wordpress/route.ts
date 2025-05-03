@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const WORDPRESS_API_URL = process.env.WORDPRESS_API_URL || 'http://anjia-wordpress.local/wp-json'
-const ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'DELETE']
+const WORDPRESS_API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || 'https://yourdomain.com/wp-json'
+const ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 
 // In-memory cache for API responses
 const API_CACHE = new Map();
-const CACHE_DURATION = 1000 * 60 * 5; // 5 minutes default cache
+const CACHE_DURATION = 1000 * 60 * 15; // 15 minutes default cache
+const STALE_WHILE_REVALIDATE = 1000 * 60 * 60; // 1 hour stale-while-revalidate
 
 export async function GET(request: NextRequest) {
   return handleRequest(request)
@@ -23,6 +24,34 @@ export async function DELETE(request: NextRequest) {
   return handleRequest(request)
 }
 
+// Function to refresh cache in background
+async function refreshCache(url: string, method: string) {
+  try {
+    const response = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      next: { revalidate: 300 }
+    });
+
+    if (!response.ok) return;
+
+    const data = await response.json();
+    const transformedData = Array.isArray(data)
+      ? data.map(transformWordPressData)
+      : transformWordPressData(data);
+
+    API_CACHE.set(url, {
+      timestamp: Date.now(),
+      data: transformedData
+    });
+  } catch (error) {
+    console.error('Cache refresh failed:', error);
+  }
+}
+
 async function handleRequest(request: NextRequest) {
   try {
     // Get the path parameters from the URL
@@ -38,9 +67,20 @@ async function handleRequest(request: NextRequest) {
       const cacheKey = wpUrl;
       const cachedResponse = API_CACHE.get(cacheKey);
 
-      if (cachedResponse && (Date.now() - cachedResponse.timestamp < CACHE_DURATION)) {
-        // Return cached response
-        return NextResponse.json(cachedResponse.data);
+      if (cachedResponse) {
+        const age = Date.now() - cachedResponse.timestamp;
+
+        // If cache is fresh, return it immediately
+        if (age < CACHE_DURATION) {
+          return NextResponse.json(cachedResponse.data);
+        }
+
+        // If cache is stale but within SWR window, return stale data and refresh in background
+        if (age < STALE_WHILE_REVALIDATE) {
+          // Trigger background refresh
+          refreshCache(wpUrl, request.method).catch(console.error);
+          return NextResponse.json(cachedResponse.data);
+        }
       }
     }
 
@@ -54,7 +94,7 @@ async function handleRequest(request: NextRequest) {
         'Accept': 'application/json'
       },
       body: request.method !== 'GET' ? await request.text() : undefined,
-      next: { revalidate: 60 } // Use Next.js built-in cache for 60 seconds
+      next: { revalidate: 300 } // Use Next.js built-in cache for 5 minutes
     })
 
     // Check if response is successful

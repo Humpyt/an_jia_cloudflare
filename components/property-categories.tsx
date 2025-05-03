@@ -4,42 +4,51 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { Building, Home, Landmark, Hotel, Store } from "lucide-react"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useLanguage } from "@/components/language-switcher"
+import { useToast } from "@/components/ui/use-toast"
 
 // Define categories with icons and labels
 const categoryButtons = [
   {
     id: "apartment",
     name: "apartment",
-    icon: Building
+    icon: Building,
+    count: 12 // This would ideally come from an API call
   },
   {
     id: "house",
     name: "house",
-    icon: Home
+    icon: Home,
+    count: 8
   },
   {
     id: "land",
     name: "land",
-    icon: Landmark
+    icon: Landmark,
+    count: 5
   },
   {
     id: "hotel",
     name: "hotel",
-    icon: Hotel
+    icon: Hotel,
+    count: 3
   },
   {
     id: "commercial",
     name: "commercial",
-    icon: Store
+    icon: Store,
+    count: 6
   }
 ]
 
 export function PropertyCategories() {
+  const router = useRouter()
   const [activeCategory, setActiveCategory] = useState("all")
+  const [isLoading, setIsLoading] = useState(false)
   const { translate } = useLanguage()
   const searchParams = useSearchParams()
+  const { toast } = useToast()
 
   // Set active category based on URL parameters on load
   useEffect(() => {
@@ -49,50 +58,110 @@ export function PropertyCategories() {
     }
   }, [searchParams])
 
+  // Handle category selection with router instead of direct window.location change
+  const handleCategorySelect = async (categoryId) => {
+    if (categoryId === activeCategory) return
+
+    setIsLoading(true)
+    try {
+      setActiveCategory(categoryId)
+
+      // Create a new URLSearchParams object from the current URL
+      const params = new URLSearchParams(searchParams.toString())
+
+      if (categoryId === "all") {
+        params.delete('propertyType')
+      } else {
+        params.set('propertyType', categoryId)
+      }
+
+      // Navigate to properties page with the category filter
+      router.push(`/properties?${params.toString()}`)
+
+      // Show success toast
+      toast({
+        title: translate("category_selected"),
+        description: translate("showing_properties_in_category", { category: translate(categoryId === "all" ? "all" : categoryId) }),
+        duration: 2000
+      })
+    } catch (error) {
+      console.error("Category selection error:", error)
+      toast({
+        title: translate("selection_error"),
+        description: translate("please_try_again"),
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
-    <section className="py-8">
+    <section className="py-10 bg-neutral-50">
       <div className="container">
-        <h2 className="text-2xl font-bold mb-6">{translate("browse_by_category")}</h2>
-        <div className="relative">
-          <div className="flex overflow-x-auto pb-4 scrollbar-hide -mx-4 px-4">
-            <div className="flex gap-3">
-              <Button
-                key="all"
-                variant="outline"
-                className={cn(
-                  "flex flex-col h-auto py-3 px-4 rounded-xl border-neutral-200 hover:border-neutral-300 shadow-sm",
-                  activeCategory === "all" && "border-rose-500 bg-rose-50 text-rose-500 hover:border-rose-500",
+        <h2 className="text-2xl font-bold mb-8 text-center">Browse By Category</h2>
+        <div className="max-w-4xl mx-auto">
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+            <div
+              className={cn(
+                "flex flex-col items-center justify-center p-4 rounded-2xl transition-all duration-200 cursor-pointer",
+                activeCategory === "all"
+                  ? "bg-rose-500 text-white shadow-md"
+                  : "bg-white border border-neutral-200 hover:border-rose-300 hover:bg-rose-50 shadow-sm",
+                isLoading && "opacity-70 pointer-events-none"
+              )}
+              onClick={() => handleCategorySelect("all")}
+            >
+              <div className="w-12 h-12 flex items-center justify-center rounded-full bg-opacity-20 mb-3">
+                {isLoading && activeCategory === "all" ? (
+                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : activeCategory === "all" ? (
+                  <div className="w-3 h-3 rounded-full bg-white"></div>
+                ) : (
+                  <div className="w-3 h-3 rounded-full bg-rose-500"></div>
                 )}
-                onClick={() => {
-                  setActiveCategory("all")
-                  const params = new URLSearchParams(window.location.search)
-                  params.delete('propertyType')
-                  window.location.href = `${window.location.pathname}?${params.toString()}`
-                }}
-              >
-                <span className="text-xs font-medium">{translate("all")}</span>
-              </Button>
-              {categoryButtons.map((category) => (
-                <Button
-                  key={category.id}
-                  variant="outline"
-                  className={cn(
-                    "flex flex-col h-auto py-3 px-4 rounded-xl border-neutral-200 hover:border-neutral-300 shadow-sm",
-                    activeCategory === category.id && "border-rose-500 bg-rose-50 text-rose-500 hover:border-rose-500",
-                  )}
-                  onClick={() => {
-                    setActiveCategory(category.id)
-                    // Update URL with property type filter
-                    const params = new URLSearchParams(window.location.search)
-                    params.set('propertyType', category.id)
-                    window.location.href = `${window.location.pathname}?${params.toString()}`
-                  }}
-                >
-                  <category.icon className="h-5 w-5 mb-1" />
-                  <span className="text-xs font-medium">{translate(category.name)}</span>
-                </Button>
-              ))}
+              </div>
+              <span className={cn(
+                "font-medium",
+                activeCategory === "all" ? "text-white" : "text-neutral-800"
+              )}>{translate("all")}</span>
+              <span className="text-xs mt-1 opacity-70">
+                {categoryButtons.reduce((total, cat) => total + cat.count, 0)}
+              </span>
             </div>
+
+            {categoryButtons.map((category) => (
+              <div
+                key={category.id}
+                className={cn(
+                  "flex flex-col items-center justify-center p-4 rounded-2xl transition-all duration-200 cursor-pointer",
+                  activeCategory === category.id
+                    ? "bg-rose-500 text-white shadow-md"
+                    : "bg-white border border-neutral-200 hover:border-rose-300 hover:bg-rose-50 shadow-sm",
+                  isLoading && "opacity-70 pointer-events-none"
+                )}
+                onClick={() => handleCategorySelect(category.id)}
+              >
+                <div className={cn(
+                  "w-12 h-12 flex items-center justify-center rounded-full mb-3",
+                  activeCategory === category.id ? "bg-white bg-opacity-20" : "bg-rose-50"
+                )}>
+                  {isLoading && activeCategory === category.id ? (
+                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <category.icon className={cn(
+                      "h-6 w-6",
+                      activeCategory === category.id ? "text-white" : "text-rose-500"
+                    )} />
+                  )}
+                </div>
+                <span className={cn(
+                  "font-medium capitalize",
+                  activeCategory === category.id ? "text-white" : "text-neutral-800"
+                )}>{translate(category.name)}</span>
+                <span className="text-xs mt-1 opacity-70">{category.count}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>

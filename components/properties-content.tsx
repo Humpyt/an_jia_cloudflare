@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -13,43 +13,63 @@ import { PropertyCard } from "@/components/property-card"
 import { useLanguage } from "@/components/language-switcher"
 import { Property } from "@/lib/property-data"
 import { PropertyCategories } from "@/components/property-categories"
+import { CustomPagination } from "@/components/custom-pagination"
 
-export function PropertiesContent({ 
-  initialProperties, 
-  searchParams 
-}: { 
-  initialProperties: { data: Property[], error: null }, 
-  searchParams: Record<string, string | string[] | undefined> 
+export function PropertiesContent({
+  initialProperties,
+  searchParams
+}: {
+  initialProperties: {
+    data: Property[],
+    pagination: {
+      total: number,
+      totalPages: number,
+      currentPage: number,
+      perPage: number,
+      offset: number
+    },
+    error: null
+  },
+  searchParams: Record<string, string | string[] | undefined>
 }) {
   const { translate } = useLanguage()
   const [properties, setProperties] = useState(initialProperties.data || [])
+  const [pagination, setPagination] = useState(initialProperties.pagination)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Get current page from pagination or search params
+  const currentPage = pagination.currentPage || parseInt(searchParams?.page?.toString() || '1')
+
   // Form state
   const [filters, setFilters] = useState({
-    minPrice: searchParams.minPrice as string || '',
-    maxPrice: searchParams.maxPrice as string || '',
-    bedrooms: searchParams.bedrooms as string || 'any',
-    bathrooms: searchParams.bathrooms as string || 'any',
-    propertyType: searchParams.propertyType as string || 'any',
-    amenities: Array.isArray(searchParams.amenities) ? searchParams.amenities : 
-      (searchParams.amenities ? [searchParams.amenities as string] : [])
+    minPrice: searchParams?.minPrice?.toString() || '',
+    maxPrice: searchParams?.maxPrice?.toString() || '',
+    bedrooms: searchParams?.bedrooms?.toString() || 'any',
+    bathrooms: searchParams?.bathrooms?.toString() || 'any',
+    propertyType: searchParams?.propertyType?.toString() || 'any',
+    location: searchParams?.location?.toString() || '',
+    moveInDate: searchParams?.moveInDate?.toString() || '',
+    occupants: searchParams?.occupants?.toString() || '',
+    amenities: Array.isArray(searchParams?.amenities) ? searchParams.amenities :
+      (searchParams?.amenities ? [searchParams.amenities.toString()] : [])
   })
-  
+
   return (
     <main className="flex-1">
       <section className="relative py-20 text-white">
         {/* Background image with overlay */}
         <div className="absolute inset-0 z-0">
-          <Image 
-            src="/images/03/WhatsApp Image 2025-04-09 at 11.36.26 AM.jpeg" 
-            alt="Kampala Properties" 
-            fill 
+          <Image
+            src="/images/03/WhatsApp Image 2025-04-09 at 11.36.26 AM.jpeg"
+            alt="Kampala Properties"
+            fill
             className="object-cover"
             priority
             sizes="100vw"
-            quality={80}
+            quality={75}
+            placeholder="blur"
+            blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABQODxIPDRQSEBIXFRQdHx0fHRsdHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR3/2wBDAR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR3/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
           />
           <div className="absolute inset-0 bg-black/50" />
         </div>
@@ -76,21 +96,71 @@ export function PropertiesContent({
                     e.preventDefault()
                     setLoading(true)
                     setError(null)
-                    
+
                     try {
-                      const queryParams = new URLSearchParams()
-                      
-                      if (filters.minPrice) queryParams.set('minPrice', filters.minPrice)
-                      if (filters.maxPrice) queryParams.set('maxPrice', filters.maxPrice)
-                      if (filters.bedrooms !== 'any') queryParams.set('bedrooms', filters.bedrooms)
-                      if (filters.bathrooms !== 'any') queryParams.set('bathrooms', filters.bathrooms)
-                      if (filters.propertyType !== 'any') queryParams.set('propertyType', filters.propertyType)
+                      // Start with current query params to preserve other parameters
+                      const queryParams = new URLSearchParams(window.location.search)
+
+                      // Reset to page 1 when applying new filters
+                      queryParams.set('page', '1')
+
+                      // Update or remove filter parameters
+                      if (filters.location) {
+                        queryParams.set('location', filters.location)
+                      } else {
+                        queryParams.delete('location')
+                      }
+
+                      if (filters.minPrice) {
+                        queryParams.set('minPrice', filters.minPrice)
+                      } else {
+                        queryParams.delete('minPrice')
+                      }
+
+                      if (filters.maxPrice) {
+                        queryParams.set('maxPrice', filters.maxPrice)
+                      } else {
+                        queryParams.delete('maxPrice')
+                      }
+
+                      if (filters.bedrooms !== 'any') {
+                        queryParams.set('bedrooms', filters.bedrooms)
+                      } else {
+                        queryParams.delete('bedrooms')
+                      }
+
+                      if (filters.bathrooms !== 'any') {
+                        queryParams.set('bathrooms', filters.bathrooms)
+                      } else {
+                        queryParams.delete('bathrooms')
+                      }
+
+                      if (filters.propertyType !== 'any') {
+                        queryParams.set('propertyType', filters.propertyType)
+                      } else {
+                        queryParams.delete('propertyType')
+                      }
+
+                      if (filters.moveInDate) {
+                        queryParams.set('moveInDate', filters.moveInDate)
+                      } else {
+                        queryParams.delete('moveInDate')
+                      }
+
+                      if (filters.occupants) {
+                        queryParams.set('occupants', filters.occupants)
+                      } else {
+                        queryParams.delete('occupants')
+                      }
+
+                      // Remove all existing amenities and add the selected ones
+                      queryParams.delete('amenities')
                       if (filters.amenities.length > 0) {
-                        filters.amenities.forEach(amenity => 
+                        filters.amenities.forEach(amenity =>
                           queryParams.append('amenities', amenity)
                         )
                       }
-                      
+
                       // Use window.location to update URL with filters
                       window.location.href = `${window.location.pathname}?${queryParams.toString()}`
                     } catch (err: any) {
@@ -100,15 +170,26 @@ export function PropertiesContent({
                     }
                   }}>
                     <div className="space-y-4">
+                      <Label>{translate("location")}</Label>
+                      <Input
+                        id="location"
+                        type="text"
+                        placeholder="Enter location"
+                        value={filters.location}
+                        onChange={(e) => setFilters(prev => ({ ...prev, location: e.target.value }))}
+                      />
+                    </div>
+
+                    <div className="space-y-4">
                       <Label>{translate("price_range")}</Label>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <Label htmlFor="min-price" className="text-sm">
                             {translate("min_price")}
                           </Label>
-                          <Input 
-                            id="min-price" 
-                            type="number" 
+                          <Input
+                            id="min-price"
+                            type="number"
                             placeholder="0"
                             value={filters.minPrice}
                             onChange={(e) => setFilters(prev => ({ ...prev, minPrice: e.target.value }))}
@@ -118,9 +199,9 @@ export function PropertiesContent({
                           <Label htmlFor="max-price" className="text-sm">
                             {translate("max_price")}
                           </Label>
-                          <Input 
-                            id="max-price" 
-                            type="number" 
+                          <Input
+                            id="max-price"
+                            type="number"
                             placeholder="5000"
                             value={filters.maxPrice}
                             onChange={(e) => setFilters(prev => ({ ...prev, maxPrice: e.target.value }))}
@@ -219,22 +300,43 @@ export function PropertiesContent({
                       <Button type="submit" disabled={loading}>
                         {loading ? 'Applying...' : translate("apply_filters")}
                       </Button>
-                      <Button 
-                        variant="outline" 
-                        type="reset" 
+                      <Button
+                        variant="outline"
+                        type="button"
                         onClick={() => {
+                          // Reset the form state
                           setFilters({
                             minPrice: '',
                             maxPrice: '',
                             bedrooms: 'any',
                             bathrooms: 'any',
                             propertyType: 'any',
+                            location: '',
+                            moveInDate: '',
+                            occupants: '',
                             amenities: []
                           })
-                          window.location.href = window.location.pathname
+
+                          // Preserve only non-filter parameters like language
+                          const currentParams = new URLSearchParams(window.location.search)
+                          const preservedParams = new URLSearchParams()
+
+                          // List of parameters to preserve (not filter-related)
+                          const preserveList = ['lang']
+
+                          preserveList.forEach(param => {
+                            if (currentParams.has(param)) {
+                              preservedParams.set(param, currentParams.get(param)!)
+                            }
+                          })
+
+                          // Navigate to the properties page with only preserved parameters
+                          const queryString = preservedParams.toString()
+                          window.location.href = window.location.pathname + (queryString ? `?${queryString}` : '')
                         }}
+                        disabled={loading}
                       >
-                        {translate("reset_filters")}
+                        {loading ? translate("resetting") : translate("reset_filters")}
                       </Button>
                     </div>
                   </form>
@@ -247,7 +349,7 @@ export function PropertiesContent({
 
               <div className="flex justify-between items-center mt-6">
                 <p className="text-muted-foreground">
-                  {properties.length} {translate("properties")}
+                  {pagination.total} {pagination.total === 1 ? translate("property") : translate("properties")}
                 </p>
                 <div className="flex items-center gap-2">
                   <span className="text-sm">{translate("sort_by")}:</span>
@@ -264,11 +366,37 @@ export function PropertiesContent({
                 </div>
               </div>
 
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {properties.map((property) => (
-                  <PropertyCard key={property.id} property={property} />
-                ))}
-              </div>
+              {loading ? (
+                <div className="flex justify-center items-center py-20">
+                  <div className="h-10 w-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              ) : properties.length === 0 ? (
+                <div className="text-center py-20">
+                  <h3 className="text-xl font-semibold mb-2">{translate("no_properties_found")}</h3>
+                  <p className="text-muted-foreground">{translate("try_different_filters")}</p>
+                </div>
+              ) : (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 content-visibility-auto mb-12">
+                  {properties.map((property) => (
+                    <PropertyCard key={property.id} property={property} />
+                  ))}
+                </div>
+              )}
+
+              {pagination.totalPages > 1 && (
+                <div className="flex justify-center mb-16">
+                  <CustomPagination
+                    currentPage={pagination.currentPage}
+                    totalPages={pagination.totalPages}
+                    onPageChange={(page) => {
+                      // Create URL with new page parameter
+                      const params = new URLSearchParams(window.location.search);
+                      params.set('page', page.toString());
+                      window.location.href = `${window.location.pathname}?${params.toString()}`;
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -94,19 +94,18 @@ export default function ContactPage() {
                     </div>
                     <div>
                       <h3 className="font-semibold mb-2">{translate("phone")}</h3>
-                      <p className="text-sm text-neutral-600">+256 (0) 701-234567</p>
-                      <p className="text-sm text-neutral-600">+256 (0) 772-345678</p>
+                      <p className="text-sm text-neutral-600">+256 707 507 465</p>
+                      <p className="text-sm text-neutral-600">+256 782 528 269</p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-4">
                     <div className="mt-1">
-                      <Mail className="h-5 w-5 text-rose-500" />
+                      <MessageSquare className="h-5 w-5 text-rose-500" />
                     </div>
                     <div>
-                      <h3 className="font-semibold mb-2">{translate("email")}</h3>
-                      <p className="text-sm text-neutral-600">info@anjiayouxuan.com</p>
-                      <p className="text-sm text-neutral-600">support@anjiayouxuan.com</p>
+                      <h3 className="font-semibold mb-2">WeChat</h3>
+                      <p className="text-sm text-neutral-600">dandanyuan888</p>
                     </div>
                   </div>
 
@@ -133,9 +132,6 @@ export default function ContactPage() {
                       <div className="flex gap-4">
                         <Link href="#" className="text-neutral-600 hover:text-rose-500">
                           WhatsApp
-                        </Link>
-                        <Link href="#" className="text-neutral-600 hover:text-rose-500">
-                          WeChat
                         </Link>
                       </div>
                     </div>

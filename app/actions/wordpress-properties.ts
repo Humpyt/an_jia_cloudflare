@@ -29,16 +29,16 @@ export async function createProperty(data: CreatePropertyData) {
     console.log('Creating property with data:', data)
     const response = await wordpressApi.createProperty(data)
     console.log('Property created:', response)
-    
+
     // Revalidate the properties page
     revalidatePath('/properties')
-    
+
     return { success: true, data: response }
   } catch (error: any) {
     console.error('Error creating property:', error)
-    return { 
-      success: false, 
-      error: error.message || 'Failed to create property' 
+    return {
+      success: false,
+      error: error.message || 'Failed to create property'
     }
   }
 }
@@ -60,16 +60,40 @@ export async function getPropertiesWithFilters(options: {
 }) {
   try {
     console.log('Server action: Fetching properties with filters:', options);
-    const properties = await wordpressApi.getPropertiesWithFilters(options);
-    console.log(`Successfully fetched ${properties.length} properties`);
-    return properties;
+    const result = await wordpressApi.getPropertiesWithFilters(options);
+
+    // Check if we have the new format with pagination
+    if (result && result.properties && result.pagination) {
+      console.log(`Successfully fetched ${result.properties.length} properties. Total: ${result.pagination.total}`);
+      return result;
+    }
+
+    // Handle legacy format (array of properties)
+    if (Array.isArray(result)) {
+      console.log(`Successfully fetched ${result.length} properties (legacy format)`);
+      return {
+        properties: result,
+        pagination: {
+          total: result.length,
+          totalPages: 1,
+          currentPage: 1,
+          perPage: options.limit || 10,
+          offset: options.offset || 0
+        }
+      };
+    }
+
+    // If we get here, something unexpected happened
+    console.error("Unexpected response format from WordPress API");
+    throw new Error("Unexpected response format");
+
   } catch (error: any) {
     console.error("Error in getPropertiesWithFilters:", error);
-    
+
     // If we're in development mode, return some fallback data
     if (process.env.NODE_ENV === 'development') {
       console.log('Returning fallback property data for development');
-      return [
+      const fallbackProperties = [
         {
           id: 'fallback-1',
           title: 'Fallback Property 1',
@@ -97,10 +121,30 @@ export async function getPropertiesWithFilters(options: {
           error: error.message || 'WordPress API error'
         }
       ];
+
+      return {
+        properties: fallbackProperties,
+        pagination: {
+          total: fallbackProperties.length,
+          totalPages: 1,
+          currentPage: 1,
+          perPage: options.limit || 10,
+          offset: options.offset || 0
+        }
+      };
     }
-    
-    // In production, return an empty array
-    return [];
+
+    // In production, return an empty result with pagination
+    return {
+      properties: [],
+      pagination: {
+        total: 0,
+        totalPages: 0,
+        currentPage: 1,
+        perPage: options.limit || 10,
+        offset: options.offset || 0
+      }
+    };
   }
 }
 
@@ -109,11 +153,11 @@ export async function getPropertiesWithFilters(options: {
  */
 export async function getPropertyById(id: string): Promise<Property | null> {
   console.log(`Server action: Fetching property with ID ${id}`);
-  
+
   // The wordpress.js implementation now handles errors and returns a fallback property
   // object if the API call fails, so we don't need to do additional error handling here
   const property = await wordpressApi.getPropertyById(id);
-  
+
   console.log(`Server action: Completed property fetch for ID ${id}`);
   return property;
 }

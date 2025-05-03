@@ -49,7 +49,7 @@ export function FeaturedProperties() {
   const [favorites, setFavorites] = useState<string[]>([])
 
   const toggleFavorite = (id: string) => {
-    setFavorites(prev => 
+    setFavorites(prev =>
       prev.includes(id) ? prev.filter(fid => fid !== id) : [...prev, id]
     )
   }
@@ -60,7 +60,12 @@ export function FeaturedProperties() {
         const response = await fetch(`${process.env.NEXT_PUBLIC_WORDPRESS_API_URL}/anjia/v1/featured-properties`)
         if (!response.ok) throw new Error('Failed to fetch')
         const data = await response.json()
-        setProperties(data)
+        // Mark all featured properties as premium
+        const propertiesWithPremium = data.map(property => ({
+          ...property,
+          isPremium: true
+        }))
+        setProperties(propertiesWithPremium)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load properties')
       } finally {
@@ -73,11 +78,14 @@ export function FeaturedProperties() {
 
   if (loading) {
     return (
-      <section className="py-16">
+      <section className="py-20 bg-neutral-50">
         <div className="container">
-          <h2 className="text-3xl font-bold tracking-tight mb-8">{translate("featured_properties")}</h2>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {[...Array(6)].map((_, i) => (
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold tracking-tight mb-2">Featured Properties</h2>
+            <p className="text-neutral-500">Discover our selection of premium properties in Kampala</p>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
               <div key={i} className="animate-pulse">
                 <div className="bg-gray-200 h-64 rounded-lg mb-4"></div>
                 <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
@@ -92,9 +100,12 @@ export function FeaturedProperties() {
 
   if (error) {
     return (
-      <section className="py-16">
+      <section className="py-20 bg-neutral-50">
         <div className="container">
-          <h2 className="text-3xl font-bold tracking-tight mb-8">{translate("featured_properties")}</h2>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold tracking-tight mb-2">Featured Properties</h2>
+            <p className="text-neutral-500">Discover our selection of premium properties in Kampala</p>
+          </div>
           <div className="bg-red-50 text-red-500 p-4 rounded-lg">{error}</div>
         </div>
       </section>
@@ -103,9 +114,12 @@ export function FeaturedProperties() {
 
   if (properties.length === 0) {
     return (
-      <section className="py-16">
+      <section className="py-20 bg-neutral-50">
         <div className="container">
-          <h2 className="text-3xl font-bold tracking-tight mb-8">{translate("featured_properties")}</h2>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold tracking-tight mb-2">Featured Properties</h2>
+            <p className="text-neutral-500">Discover our selection of premium properties in Kampala</p>
+          </div>
           <div className="text-center text-gray-500 py-8">{translate("no_featured_properties")}</div>
         </div>
       </section>
@@ -115,10 +129,13 @@ export function FeaturedProperties() {
   return (
     <section className="py-16">
       <div className="container">
-        <h2 className="text-3xl font-bold tracking-tight mb-8">{translate("featured_properties")}</h2>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold tracking-tight mb-2">Featured Properties</h2>
+          <p className="text-neutral-500">Discover our selection of premium properties in Kampala</p>
+        </div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {properties.map((property) => (
-            <Card key={property.id} className="group overflow-hidden">
+            <Card key={property.id} className="group overflow-hidden border rounded-lg shadow-sm hover:shadow-md">
               <div className="relative aspect-[4/3]">
                 <Link href={`/properties/${property.id}`}>
                   <div className="relative w-full h-full">
@@ -141,45 +158,27 @@ export function FeaturedProperties() {
                   <span className="sr-only">Add to favorites</span>
                 </Button>
                 {property.isPremium && (
-                  <Badge className="absolute top-3 left-3 bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-500 hover:to-rose-500 text-white border-0">
+                  <Badge className="absolute top-3 left-3 bg-orange-500 hover:bg-orange-600 text-white border-0 px-3 py-1 rounded-sm font-medium">
                     Premium
                   </Badge>
                 )}
               </div>
               <div className="p-4">
-                <div className="flex items-start justify-between">
-                  <Link href={`/properties/${property.id}`} className="hover:underline">
-                    <h3 className="font-medium text-base line-clamp-1">{property.title}</h3>
-                  </Link>
-                  <div className="flex items-center gap-1 text-sm">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                      className="w-4 h-4 text-amber-500"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    <span>{(4.5 + (parseInt(property.id) % 5) * 0.1).toFixed(2)}</span>
-                    <span className="text-neutral-400">({10 + (parseInt(property.id) % 20)})</span>
-                  </div>
-                </div>
+                <Link href={`/properties/${property.id}`} className="hover:underline">
+                  <h3 className="font-medium text-base line-clamp-1">{property.title}</h3>
+                </Link>
                 <p className="text-sm text-neutral-500 mt-1">{property.location}</p>
                 <div className="flex items-center gap-2 mt-2 text-sm">
                   <span>
-                    {property.bedrooms} {parseInt(property.bedrooms) === 1 ? translate("bed") : translate("beds")}
+                    {property.bedrooms} {parseInt(property.bedrooms) === 1 ? "Bedroom" : "Bedrooms"}
                   </span>
                   <span>•</span>
                   <span>
-                    {Math.floor(parseInt(property.bedrooms) * 0.75)} {Math.floor(parseInt(property.bedrooms) * 0.75) === 1 ? translate("bath") : translate("baths")}
+                    {property.bathrooms} {parseFloat(property.bathrooms) === 1 ? "Bathroom" : "Bathrooms"}
                   </span>
                 </div>
-                <div className="mt-3">
-                  <span className="font-semibold">${property.price || 'Contact for Price'}</span>
+                <div className="mt-2">
+                  <span className="font-semibold">${property.price}</span>
                   {property.paymentTerms && (
                     <span className="text-neutral-500 text-sm"> /{property.paymentTerms.toLowerCase()}</span>
                   )}
@@ -189,9 +188,9 @@ export function FeaturedProperties() {
           ))}
         </div>
         <div className="mt-8 text-center">
-          <Button asChild size="lg" className="bg-rose-500 hover:bg-rose-600 text-white">
+          <Button asChild size="lg" className="bg-indigo-600 hover:bg-indigo-700 text-white">
             <Link href="/properties">
-              {translate("view_all_properties")}
+              View All Properties
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"

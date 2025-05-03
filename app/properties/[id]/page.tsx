@@ -12,7 +12,7 @@ import { LanguageSwitcher } from "@/components/language-switcher"
 import { ErrorBoundary } from "@/components/error-boundary"
 
 // Function to enhance description using DeepSeek API
-async function enhanceDescription(originalDescription: string): Promise<{ enhanced: string, summary: string }> {
+async function enhanceDescription(originalDescription: string, property?: any): Promise<{ enhanced: string, summary: string }> {
   // Use the provided API key directly
   const apiKey = 'sk-de1e05e92ed048d597ae24e64deb34c6'; // DeepSeek API key
 
@@ -26,17 +26,28 @@ async function enhanceDescription(originalDescription: string): Promise<{ enhanc
   const apiUrl = 'https://api.deepseek.com/v1/chat/completions';
 
   try {
+    // Create property context for better descriptions
+    const propertyContext = property ? `
+      Property Name: ${property.title}
+      Type: ${property.propertyType}
+      Location: ${property.location}
+      Bedrooms: ${property.bedrooms}
+      Bathrooms: ${property.bathrooms}
+      Amenities: ${property.amenities?.join(', ')}
+      Size: ${property.squareMeters ? `${property.squareMeters} m²` : 'Not specified'}
+    ` : '';
+
     // First, create an enhanced version of the full description
     const enhancePayload = {
       model: "deepseek-chat",
       messages: [
         {
           role: "system",
-          content: "You are a professional real estate copywriter. Enhance the following property description to make it more appealing and professional while maintaining accuracy."
+          content: "You are a professional real estate copywriter. Enhance the following property description to make it more appealing and professional while maintaining accuracy. Make sure to use the specific property name and details provided."
         },
         {
           role: "user",
-          content: `Enhance the following property description: \n\n${originalDescription}`
+          content: `Property Details:\n${propertyContext}\n\nEnhance the following property description: \n\n${originalDescription}`
         }
       ],
       max_tokens: 500,
@@ -49,11 +60,11 @@ async function enhanceDescription(originalDescription: string): Promise<{ enhanc
       messages: [
         {
           role: "system",
-          content: "You are a professional real estate copywriter. Create a concise, professional summary (2-3 sentences) that highlights the key features and selling points of this property."
+          content: "You are a professional real estate copywriter. Create a concise, professional summary (2-3 sentences) that highlights the key features and selling points of this property. Make sure to use the specific property name and details provided."
         },
         {
           role: "user",
-          content: `Create a professional summary for this property: \n\n${originalDescription}`
+          content: `Property Details:\n${propertyContext}\n\nCreate a professional summary for this property: \n\n${originalDescription}`
         }
       ],
       max_tokens: 150,
@@ -146,18 +157,19 @@ export default async function PropertyPage(props: Props) {
       // Enhance description if possible
       let originalDescription = property.description || '';
 
-      // If there's no description, add a sample one for testing
+      // If there's no description, create a property-specific one
       if (!originalDescription || originalDescription.trim() === '') {
-        originalDescription = `Alma Residences is a modern apartment complex located in the heart of Bugolobi.
-        This ${property.bedrooms}-bedroom apartment offers comfortable living with ${property.bathrooms} bathrooms
+        originalDescription = `${property.title} is a modern ${property.propertyType} located in ${property.location}.
+        This ${property.bedrooms}-bedroom ${property.propertyType} offers comfortable living with ${property.bathrooms} bathrooms
         and a range of amenities including ${property.amenities.join(', ')}.`;
-        console.log('Added sample description for testing:', originalDescription);
+        console.log('Created property-specific description:', originalDescription);
       }
 
       // Call DeepSeek API to enhance and summarize the description
-      console.log('Calling DeepSeek API to enhance description...');
-      const { enhanced, summary } = await enhanceDescription(originalDescription);
+      console.log('Calling DeepSeek API to enhance description with property details...');
+      const { enhanced, summary } = await enhanceDescription(originalDescription, property);
       console.log('DeepSeek API response received:', {
+        propertyTitle: property.title,
         originalLength: originalDescription.length,
         enhancedLength: enhanced.length,
         summaryLength: summary.length

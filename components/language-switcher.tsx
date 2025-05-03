@@ -33,14 +33,14 @@ const languages: Language[] = [
 // Create a context for language translation
 type LanguageContextType = {
   currentLanguage: Language;
-  translate: (key: string) => string;
+  translate: (key: string, params?: Record<string, string | number>) => string;
   changeLanguage: (lang: Language) => void;
 };
 
 const defaultTranslations = {
   en: {
     "featured_properties": "Featured Properties",
-    "discover_premium": "Discover our selection of premium properties in Kampala",
+    "discover_premium_properties": "Discover our selection of premium properties in Kampala",
     "view_all_properties": "View All Properties",
     "properties": "Properties",
     "neighborhoods": "Neighborhoods",
@@ -211,8 +211,8 @@ const defaultTranslations = {
     "list_another": "List Another Property",
   },
   zh: {
-    "featured_properties": "精选房产",
-    "discover_premium": "探索我们在坎帕拉的精选优质房产",
+    "featured_properties": "精选房源",
+    "discover_premium_properties": "探索我们在坎帕拉的优质房源",
     "view_all_properties": "查看所有房产",
     "properties": "房产",
     "neighborhoods": "社区",
@@ -337,13 +337,6 @@ const defaultTranslations = {
     "performance_analytics_description": "通过详细的分析追踪您房源的浏览量、咨询量和参与度。",
     "what_hosts_say": "房东怎么说",
     "get_started": "填写以下表格开始",
-
-    // List property form translations
-    "property_type": "房产类型",
-    "select_property_type": "选择房产类型",
-    "apartment": "公寓",
-    "house": "独栋房屋",
-    "villa": "别墅",
     "condominium": "共管公寓",
     "studio": "开间",
     "property_title": "房产标题",
@@ -384,7 +377,7 @@ const defaultTranslations = {
   },
   ja: {
     "featured_properties": "おすすめ物件",
-    "discover_premium": "カンパラの厳選された高級物件をご覧ください",
+    "discover_premium_properties": "カンパラの厳選された物件をご覧ください",
     "view_all_properties": "すべての物件を見る",
     "properties": "物件",
     "neighborhoods": "近隣地域",
@@ -509,11 +502,6 @@ const defaultTranslations = {
     "performance_analytics_description": "詳細な分析で物件の閲覧数、問い合わせ、エンゲージメントを追跡できます。",
     "what_hosts_say": "オーナーの声",
     "get_started": "以下のフォームに記入して始めましょう",
-
-    // List property form translations
-    "property_type": "物件タイプ",
-    "select_property_type": "物件タイプを選択",
-    "apartment": "アパート",
     "house": "一戸建て",
     "villa": "ヴィラ",
     "condominium": "マンション",
@@ -590,9 +578,18 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('language', language.code);
   };
 
-  const translate = (key: string): string => {
+  const translate = (key: string, params?: Record<string, string | number>): string => {
     const langCode = currentLanguage.code;
-    return translations[langCode as keyof typeof translations]?.[key as keyof typeof defaultTranslations.en] || key;
+    let translation = translations[langCode as keyof typeof translations]?.[key as keyof typeof defaultTranslations.en] || key;
+
+    // Replace parameters in the translation string if provided
+    if (params) {
+      Object.entries(params).forEach(([paramKey, paramValue]) => {
+        translation = translation.replace(new RegExp(`{{${paramKey}}}`, 'g'), String(paramValue));
+      });
+    }
+
+    return translation;
   };
 
   return (
