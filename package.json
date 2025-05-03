@@ -2,6 +2,9 @@
   "name": "an-jia-website",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "dev:proxy": "node wp-proxy.js & next dev",
     "dev": "next dev",
